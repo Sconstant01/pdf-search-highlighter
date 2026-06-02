@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Search & Highlight Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .search-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-input-group button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .search-input-group button:hover {
+            background: #764ba2;
+        }
+        
+        .search-input-group button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .results-header h2 {
+            color: #333;
+        }
+        
+        .cost-info {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .cost-info p {
+            margin: 5px 0;
+            color: #333;
+        }
+        
+        .cost-info .label {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .pdf-list {
+            margin-top: 20px;
+        }
+        
+        .pdf-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .pdf-item:hover {
+            background: #f0f4ff;
+            transform: translateX(5px);
+        }
+        
+        .pdf-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .pdf-pages {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3c3;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            background: #667eea;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .page-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .page-navigation button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .page-navigation button:hover {
+            background: #764ba2;
+        }
+        
+        .page-navigation button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .page-info {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 PDF Search & Highlight</h1>
+            <p>Search across multiple PDFs, highlight matches, and view cost analysis</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="search-input-group">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Enter keyword or phrase to search..."
+                    autocomplete="off"
+                >
+                <button id="searchBtn" onclick="performSearch()">🔍 Search</button>
+            </div>
+            <div id="messageContainer"></div>
+        </div>
+        
+        <div class="results-section">
+            <div id="resultsContainer" class="hidden">
+                <div class="results-header">
+                    <h2>Search Results</h2>
+                </div>
+                
+                <div class="cost-info">
+                    <p><span class="label">Average Cost:</span> <span id="averageCost">-</span></p>
+                    <p><span class="label">Total Matches:</span> <span id="totalMatches">-</span></p>
+                    <p><span class="label">PDFs Found:</span> <span id="pdfsFound">-</span></p>
+                </div>
+                
+                <div class="pdf-list" id="pdfList"></div>
+            </div>
+            
+            <div id="noResults" class="no-results hidden">
+                <p>No search results yet. Try searching for a term above.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PDF Viewer Modal -->
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Document Viewer</h2>
+                <button class="close-btn" onclick="closePdfModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="pdfViewer" style="text-align: center;">
+                    <img id="pdfImage" style="max-width: 100%; border-radius: 5px;">
+                </div>
+                <div class="page-navigation">
+                    <button id="prevBtn" onclick="previousPage()" disabled>← Previous</button>
+                    <span class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button id="nextBtn" onclick="nextPage()">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentSearch = '';
+        let currentPdf = '';
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        const searchInput = document.getElementById('searchInput');
+        
+        // Allow Enter key to search
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        async function performSearch() {
+            const searchTerm = searchInput.value.trim();
+            
+            if (!searchTerm) {
+                showMessage('Please enter a search term', 'error');
+                return;
+            }
+            
+            currentSearch = searchTerm;
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ search_term: searchTerm })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Search failed');
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const noResults = document.getElementById('noResults');
+            const pdfList = document.getElementById('pdfList');
+            
+            // Update statistics
+            document.getElementById('averageCost').textContent = data.average_cost;
+            document.getElementById('totalMatches').textContent = data.total_matches;
+            document.getElementById('pdfsFound').textContent = data.pdfs_with_matches;
+            
+            // Clear previous results
+            pdfList.innerHTML = '';
+            
+            // Check if there are results
+            if (data.pdfs_with_matches === 0) {
+                resultsContainer.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                showMessage(`No matches found for "${currentSearch}"`, 'error');
+                return;
+            }
+            
+            // Display PDF results
+            for (const [filename, matches] of Object.entries(data.results)) {
+                const pages = matches.map(m => m.page);
+                const uniquePages = [...new Set(pages)];
+                
+                const pdfItem = document.createElement('div');
+                pdfItem.className = 'pdf-item';
+                pdfItem.onclick = () => openPdfModal(filename, uniquePages[0]);
+                
+                pdfItem.innerHTML = `
+                    <div class="pdf-name">📄 ${filename}</div>
+                    <div class="pdf-pages">Found on pages: ${uniquePages.join(', ')}</div>
+                `;
+                
+                pdfList.appendChild(pdfItem);
+            }
+            
+            resultsContainer.classList.remove('hidden');
+            noResults.classList.add('hidden');
+            showMessage(`Found matches in ${data.pdfs_with_matches} PDF(s)`, 'success');
+        }
+        
+        async function openPdfModal(filename, page = 1) {
+            currentPdf = filename;
+            currentPage = page;
+            
+            // Get PDF info to set total pages
+            try {
+                const response = await fetch(`/api/pdf-info/${encodeURIComponent(filename)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    totalPages = data.page_count;
+                    document.getElementById('totalPages').textContent = totalPages;
+                }
+            } catch (e) {
+                console.error('Error getting PDF info:', e);
+            }
+            
+            document.getElementById('modalTitle').textContent = `Viewing: ${filename}`;
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('pdfModal').classList.add('open');
+            
+            loadPdfPage();
+        }
+        
+        function loadPdfPage() {
+            const imageUrl = `/api/pdf/${encodeURIComponent(currentPdf)}/${currentPage}?search=${encodeURIComponent(currentSearch)}`;
+            document.getElementById('pdfImage').src = imageUrl;
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('currentPage').textContent = currentPage;
+        }
+        
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadPdfPage();
+            }
+        }
+        
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadPdfPage();
+            }
+        }
+        
+        function closePdfModal() {
+            document.getElementById('pdfModal').classList.remove('open');
+        }
+        
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        function showLoading(show) {
+            const btn = document.getElementById('searchBtn');
+            btn.disabled = show;
+            btn.textContent = show ? '⏳ Searching...' : '🔍 Search';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('pdfModal');
+            if (event.target === modal) {
+                closePdfModal();
+            }
+        };
+    </script>
+</body>
+</html>
